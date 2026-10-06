@@ -1,31 +1,39 @@
-# Wrist Controller System
+# Wrist Controller System (Wired / USB Serial)
 
-This repository contains the software stack for controlling a Wi-Fi enabled wrist motor (using a Raspberry Pi Pico W and a 28BYJ-48 stepper motor) natively through ROS 2 Actions.
+This repository contains the software stack for controlling a USB-wired wrist motor (using a Raspberry Pi Pico W and a 28BYJ-48 stepper motor) natively through ROS 2 Actions.
 
 ## Repository Structure
 
-*   **`wrist_controller/`**: MicroPython code (`main.py`) intended to run on the Raspberry Pi Pico. It hosts a TCP socket server on port `8080` to receive commands and stream feedback.
-*   **`wrist_interfaces/`**: Custom ROS 2 action definition (`WristMove.action`) for the wrist motor.
-*   **`wrist_ros2/`**: The ROS 2 Action Server Python node (`wrist_node`) that acts as the bridge between the ROS 2 network and the Pico over Wi-Fi.
+*   **`wrist_controller/`**: MicroPython code (`main.py`) intended to run on the Raspberry Pi Pico. It reads from standard input over the USB serial connection to receive commands and streams feedback over standard output.
+*   **`wrist_interfaces_wired/`**: Custom ROS 2 action definition (`WristMove.action`) for the wrist motor.
+*   **`wrist_ros2_wired/`**: The ROS 2 Action Server Python node (`wrist_node`) that acts as the bridge between the ROS 2 network and the Pico over the USB serial connection.
 
 ## 1. Building the Workspace
 
-To build the ROS 2 packages on your PC, run the following from your ROS 2 workspace root (e.g., `~/ros2_ws`):
+To build the ROS 2 packages on your PC/Raspberry Pi, ensure you have PySerial installed:
+
+```bash
+sudo apt install python3-serial
+```
+
+Then, run the following from your ROS 2 workspace root (e.g., `~/ros2_ws`):
 
 ```bash
 cd ~/ros2_ws
-colcon build --packages-up-to wrist_ros2
+colcon build --packages-up-to wrist_ros2_wired
 source install/setup.bash
 ```
 
 ## 2. Running the Action Server
 
-Start the ROS 2 Action Server and provide it with the IP address of your Raspberry Pi Pico (which is printed to the serial console when the Pico boots up):
+Start the ROS 2 Action Server and provide it with the serial port of your Raspberry Pi Pico:
 
 ```bash
-ros2 run wrist_ros2 wrist_node --ros-args -p pico_ip:="192.168.1.150"
+ros2 run wrist_ros2_wired wrist_node --ros-args -p serial_port:="/dev/ttyACM0"
 ```
-*(Replace `192.168.1.150` with the actual IP address of your Pico).* 
+*(Replace `/dev/ttyACM0` with the actual port of your Pico if it differs, e.g., `/dev/ttyUSB0`).*
+
+Note: Ensure your user has permissions to access the serial port (e.g., `sudo usermod -a -G dialout $USER`).
 
 ## 3. Sending Test Commands (CLI)
 
@@ -33,15 +41,15 @@ You can use the ROS 2 command-line interface to send action goals to the server.
 
 **Move to an Absolute Angle (e.g., 90 degrees):**
 ```bash
-ros2 action send_goal /wrist_move wrist_interfaces/action/WristMove "{command: 'ABS', angle_val: 90.0}" --feedback
+ros2 action send_goal /wrist_move wrist_interfaces_wired/action/WristMove "{command: 'ABS', angle_val: 90.0}" --feedback
 ```
 
-**Move Relative to Current Position (e.g., turn -30 degrees):**
+**Move Relative to Current Position (e.g., +45 degrees):**
 ```bash
-ros2 action send_goal /wrist_move wrist_interfaces/action/WristMove "{command: 'REL', angle_val: -30.0}" --feedback
+ros2 action send_goal /wrist_move wrist_interfaces_wired/action/WristMove "{command: 'REL', angle_val: 45.0}"
 ```
 
-**Home the Motor (Rotates 120 degrees CCW and resets origin):**
+**Home the Motor:**
 ```bash
-ros2 action send_goal /wrist_move wrist_interfaces/action/WristMove "{command: 'HOMING', angle_val: 0.0}" --feedback
+ros2 action send_goal /wrist_move wrist_interfaces_wired/action/WristMove "{command: 'HOMING'}"
 ```
