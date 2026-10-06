@@ -1,0 +1,10 @@
+# Request
+string command      # "HOMING", "ABS", "REL"
+float32 angle_val   # target angle or relative angle
+---
+# Result
+bool success
+float32 final_angle
+---
+# Feedback
+float32 current_angle
